@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"shortener/src/internal/domain/short_link"
+	shortlink "shortener/src/internal/domain/short_link"
 )
 
 type ShortLinkService struct {
@@ -14,7 +14,10 @@ type ShortLinkService struct {
 
 const maxCreateAttempts = 5
 
-func NewShortLinkService(shortLinkRepo shortlink.ShortLinkRepository, generator shortlink.ShortLinkGenerator) ShortLinkService {
+func NewShortLinkService(
+	shortLinkRepo shortlink.ShortLinkRepository,
+	generator shortlink.ShortLinkGenerator,
+) ShortLinkService {
 	return ShortLinkService{
 		shortLinkRepository: shortLinkRepo,
 		generator:           generator,
@@ -23,35 +26,35 @@ func NewShortLinkService(shortLinkRepo shortlink.ShortLinkRepository, generator 
 
 func (s *ShortLinkService) Create(
 	ctx context.Context,
-	shortUrl, originalUrl string,
+	shortURL, originalURL string,
 ) (*shortlink.ShortLink, error) {
 	for attempt := 0; attempt < maxCreateAttempts; attempt++ {
-		if shortUrl == "" {
+		if shortURL == "" {
 			generated, err := s.generator.Generate()
 			if err != nil {
 				return nil, err
 			}
-			shortUrl = generated
+			shortURL = generated
 		}
 
-		link, err := s.shortLinkRepository.Create(ctx, shortUrl, originalUrl)
+		link, err := s.shortLinkRepository.Create(ctx, shortURL, originalURL)
 		if err == nil {
 			return link, nil
 		}
 
-		if !errors.Is(err, shortlink.ErrShortURLAlreadyExists) {
+		if !errors.Is(err, shortlink.ErrShortLinkAlreadyExists) {
 			return nil, err
 		}
 
-		shortUrl = ""
+		shortURL = ""
 	}
 
 	return nil, fmt.Errorf(
 		"failed to create short link after %d attempts: %w",
-		maxCreateAttempts, shortlink.ErrShortURLAlreadyExists,
+		maxCreateAttempts, shortlink.ErrShortLinkAlreadyExists,
 	)
 }
 
-func (s *ShortLinkService) Get(ctx context.Context, shortUrl string) (*shortlink.ShortLink, error) {
-	return s.shortLinkRepository.Get(ctx, shortUrl)
+func (s *ShortLinkService) Get(ctx context.Context, shortURL string) (*shortlink.ShortLink, error) {
+	return s.shortLinkRepository.Get(ctx, shortURL)
 }

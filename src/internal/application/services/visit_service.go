@@ -25,9 +25,9 @@ func (s *VisitService) Register(ctx context.Context, visit visit.Visit) error {
 		return err
 	}
 
-	return s.producer.Produce(ctx, bytes)
+	return s.producer.Produce(ctx, []byte(visit.ID.String()), bytes)
 }
 
-func (s *VisitService) CreateBatch(ctx context.Context, visits []*visit.Visit) error {
-	return s.visitRepository.CreateBatch(ctx, visits)
+func (s *VisitService) CreateBatch(ctx context.Context, visits []visit.Visit) {
+	s.visitRepository.CreateBatch(ctx, visits)
 }

@@ -5,5 +5,5 @@ import (
 )
 
 type VisitService interface {
-	CreateBatch(ctx context.Context, visits []Visit) error
+	CreateBatch(ctx context.Context, visits []Visit)
 }

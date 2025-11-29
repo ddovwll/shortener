@@ -2,4 +2,5 @@ package shortlink
 
 import "errors"
 
-var ErrShortURLAlreadyExists = errors.New("short url already exists")
+var ErrShortLinkAlreadyExists = errors.New("short link already exists")
+var ErrShortLinkNotFound = errors.New("short link not found")

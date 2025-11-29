@@ -3,5 +3,5 @@ package contracts
 import "context"
 
 type MessageProducer interface {
-	Produce(ctx context.Context, value []byte) error
+	Produce(ctx context.Context, key, value []byte) error
 }
