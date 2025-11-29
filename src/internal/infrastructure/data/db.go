@@ -1,19 +1,12 @@
 package data
 
 import (
-	"time"
+	"shortener/src/internal/application/config"
 
 	"github.com/wb-go/wbf/dbpg"
 )
 
-type PostgresConfig struct {
-	DSN             string
-	MaxOpenConns    int
-	MaxIdleConns    int
-	ConnMaxLifetime time.Duration
-}
-
-func InitDb(cfg PostgresConfig) (*dbpg.DB, error) {
+func InitDb(cfg config.PostgresConfig) (*dbpg.DB, error) {
 	opts := &dbpg.Options{
 		MaxOpenConns:    cfg.MaxOpenConns,
 		MaxIdleConns:    cfg.MaxIdleConns,

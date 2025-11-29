@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"shortener/src/internal/domain/visit"
+	"shortener/src/pkg/logger"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -22,11 +23,27 @@ const (
 	maxBatchWait = 5 * time.Second
 )
 
+func NewVisitConsumer(
+	consumer *wbfkafka.Consumer,
+	visitService visit.VisitService,
+	retry retry.Strategy,
+) *VisitConsumer {
+	return &VisitConsumer{
+		consumer:     consumer,
+		visitService: visitService,
+		retry:        retry,
+	}
+}
+
 func (c *VisitConsumer) Start(ctx context.Context) {
-	msgs := make(chan kafka.Message)
+	msgs := make(chan kafka.Message) // channel will close in StartConsuming
 	c.consumer.StartConsuming(ctx, msgs, c.retry)
 
 	go c.run(ctx, msgs)
+}
+
+func (c *VisitConsumer) Stop() error {
+	return c.consumer.Close()
 }
 
 func (c *VisitConsumer) run(ctx context.Context, msgs <-chan kafka.Message) {
@@ -46,9 +63,9 @@ func (c *VisitConsumer) run(ctx context.Context, msgs <-chan kafka.Message) {
 
 			var v visit.Visit
 			if err := json.Unmarshal(msg.Value, &v); err != nil {
-				// TODO: log
+				logger.Error("failed to unmarshal visit", err)
 				if err := c.consumer.Commit(ctx, msg); err != nil {
-					// TODO: log
+					logger.Error("failed to commit visit", err)
 				}
 				continue
 			}
@@ -79,7 +96,7 @@ func (c *VisitConsumer) flush(ctx context.Context, batch *[]visit.Visit, lastMsg
 	c.visitService.CreateBatch(ctx, *batch)
 
 	if err := c.consumer.Commit(ctx, **lastMsg); err != nil {
-		// TODO: log
+		logger.Error("failed to commit visit", err)
 		return
 	}
 

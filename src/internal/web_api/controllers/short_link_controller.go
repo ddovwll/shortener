@@ -4,23 +4,25 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"shortener/src/internal/application/services"
 	shortlink "shortener/src/internal/domain/short_link"
 	"shortener/src/internal/domain/visit"
 	"shortener/src/internal/web_api/models"
+	"shortener/src/pkg/logger"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 )
 
 type ShortLinkController struct {
-	shortLinkService services.ShortLinkService
+	shortLinkService shortlink.ShortLinkService
 	visitService     visit.VisitService
 	validator        *validator.Validate
 }
 
 func NewShortLinkController(
-	shortLinkService services.ShortLinkService,
+	shortLinkService shortlink.ShortLinkService,
 	visitService visit.VisitService,
 	validator *validator.Validate,
 ) *ShortLinkController {
@@ -54,26 +56,43 @@ func (c *ShortLinkController) Create(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		}
+
+		logger.Error("failed to create short link", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(shortLink); err != nil {
-		// todo log
+		logger.Error("failed to write response", err)
 	}
 }
 
 func (c *ShortLinkController) Redirect(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	q := r.URL.Query()
-	shortUrl := q.Get("short_url")
+	shortURL := q.Get("short_url")
 
-	shortLink, err := c.shortLinkService.Get(ctx, shortUrl)
+	shortLink, err := c.shortLinkService.Get(ctx, shortURL)
 	if err != nil {
 		if errors.Is(err, shortlink.ErrShortLinkNotFound) {
-			// todo Not Found page
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
+
+		logger.Error("failed to get short link", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	visit := visit.Visit{
+		ID:        uuid.New(),
+		LinkID:    shortLink.ID,
+		CreatedAt: time.Now(),
+		UserAgent: r.UserAgent(),
+		IPAddress: r.RemoteAddr,
+	}
+
+	if err := c.visitService.Register(ctx, visit); err != nil {
+		logger.Error("failed to register visit", err)
 	}
 
 	http.Redirect(w, r, shortLink.OriginalURL, http.StatusFound)

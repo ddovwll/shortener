@@ -17,8 +17,8 @@ const maxCreateAttempts = 5
 func NewShortLinkService(
 	shortLinkRepo shortlink.ShortLinkRepository,
 	generator shortlink.ShortLinkGenerator,
-) ShortLinkService {
-	return ShortLinkService{
+) *ShortLinkService {
+	return &ShortLinkService{
 		shortLinkRepository: shortLinkRepo,
 		generator:           generator,
 	}

@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	shortlink "shortener/src/internal/domain/short_link"
+	"shortener/src/pkg/logger"
 	"time"
 
 	"github.com/google/uuid"
@@ -48,7 +49,7 @@ func (r *ShortLinkRepository) Create(ctx context.Context, shortURL, originalURL 
 
 	affected, err := res.RowsAffected()
 	if err != nil {
-		// todo Log message
+		logger.Error("failed to get number of rows affected", err)
 		return shortLink, nil
 	}
 
