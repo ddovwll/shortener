@@ -1,0 +1,122 @@
+basePath: /
+definitions:
+  models.CreateShortLinkRequest:
+    properties:
+      originalURL:
+        type: string
+      shortURL:
+        maxLength: 6
+        type: string
+    required:
+    - originalURL
+    type: object
+  models.CreateShortLinkResponse:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      originalURL:
+        type: string
+      shortCode:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Сервис для создания коротких ссылок и получения аналитики по переходам.
+  title: Shortener API
+  version: "1.0"
+paths:
+  /analytics/{short_url}:
+    get:
+      description: Возвращает статистику переходов, агрегированную по дням, месяцам
+        или User-Agent.
+      parameters:
+      - description: Короткий код
+        in: path
+        name: short_url
+        required: true
+        type: string
+      - description: Тип группировки
+        enum:
+        - day
+        - month
+        - userAgent
+        in: query
+        name: group
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Результат зависит от типа группировки
+          schema: {}
+        "400":
+          description: unknown group
+          schema:
+            type: string
+        "500":
+          description: internal error
+          schema:
+            type: string
+      summary: Получить аналитику по короткой ссылке
+      tags:
+      - analytics
+  /s/{short_url}:
+    get:
+      description: Ищет короткую ссылку, регистрирует визит и перенаправляет на исходный
+        URL.
+      parameters:
+      - description: Короткий код
+        in: path
+        name: short_url
+        required: true
+        type: string
+      responses:
+        "302":
+          description: Redirect
+        "404":
+          description: short link not found
+          schema:
+            type: string
+        "500":
+          description: internal error
+          schema:
+            type: string
+      summary: Перенаправить по короткой ссылке
+      tags:
+      - shortlink
+  /shorten:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новую короткую ссылку. Если shortCode не задан, он генерируется.
+      parameters:
+      - description: Данные для создания короткой ссылки
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateShortLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.CreateShortLinkResponse'
+        "400":
+          description: bad request
+          schema:
+            type: string
+        "409":
+          description: short link already exists
+          schema:
+            type: string
+        "500":
+          description: internal error
+          schema:
+            type: string
+      summary: Создать короткую ссылку
+      tags:
+      - shortlink
+swagger: "2.0"

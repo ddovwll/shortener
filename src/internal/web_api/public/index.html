@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>URL Shortener</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; }
+        h2 { margin-top: 40px; }
+        input, button, select { padding: 8px 12px; font-size: 14px; margin-right: 8px; }
+        .block { margin-bottom: 20px; }
+        .result, .stats { padding: 12px; background: #f2f2f2; border-radius: 6px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<h1>Сервис сокращения ссылок</h1>
+
+<h2>Создать короткий URL</h2>
+<div class="block">
+    <input id="originalUrl" type="text" placeholder="Введите оригинальный URL" style="width: 350px;">
+    <input id="shortUrl" type="text" placeholder="Введите короткий код (необязательно)" style="width: 150px;">
+    <button onclick="createShort()">Создать</button>
+
+    <div id="shortResult" class="result" style="display: none;"></div>
+</div>
+
+<h2>Получить статистику</h2>
+<div class="block">
+    <input id="statCode" type="text" placeholder="Введите short_code" style="width: 200px;">
+
+    <select id="group">
+        <option value="day">По дням</option>
+        <option value="month">По месяцам</option>
+        <option value="userAgent">По User-Agent</option>
+    </select>
+
+    <button onclick="getStats()">Получить</button>
+
+    <div id="statsResult" class="stats" style="display: none;"></div>
+</div>
+
+<script>
+    async function createShort() {
+        const originalUrl = document.getElementById("originalUrl").value;
+        const shortUrl = document.getElementById("shortUrl").value || null;
+        const result = document.getElementById("shortResult");
+
+        result.style.display = "none";
+
+        const r = await fetch("/shorten", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ originalURL: originalUrl, shortURL: shortUrl })
+        });
+
+        if (!r.ok) {
+            const text = await r.text();
+            result.style.display = "block";
+            result.innerHTML = `<b>Ошибка:</b> ${text}`;
+            return;
+        }
+
+        const data = await r.json();
+        result.style.display = "block";
+        result.innerHTML = `
+        <b>Короткая ссылка:</b><br>
+        <a href="/s/${data.shortCode}" target="_blank">${location.origin}/s/${data.shortCode}</a>
+    `;
+    }
+
+    async function getStats() {
+        const code = document.getElementById("statCode").value;
+        const group = document.getElementById("group").value;
+        const result = document.getElementById("statsResult");
+
+        result.style.display = "none";
+
+        const r = await fetch(`/analytics/${code}?group=${group}`);
+        if (!r.ok) {
+            result.style.display = "block";
+            result.innerHTML = "Статистика не найдена";
+            return;
+        }
+
+        const data = await r.json();
+        result.style.display = "block";
+
+        result.innerHTML = `
+        <b>Статистика (${group}):</b><br>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+    `;
+    }
+</script>
+
+</body>
+</html>

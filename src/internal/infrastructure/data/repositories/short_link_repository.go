@@ -2,11 +2,13 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	shortlink "shortener/src/internal/domain/short_link"
 	"shortener/src/pkg/logger"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/wb-go/wbf/dbpg"
 	"github.com/wb-go/wbf/retry"
 )
@@ -28,14 +30,12 @@ func (r *ShortLinkRepository) Create(ctx context.Context, shortURL, originalURL 
 		ID:          uuid.New(),
 		ShortCode:   shortURL,
 		OriginalURL: originalURL,
-		CreatedAt:   time.Now(),
+		CreatedAt:   time.Now().UTC(),
 	}
 
 	query := `INSERT INTO short_links (id, short_code, original_url, created_at) VALUES ($1, $2, $3, $4)`
 
-	res, err := r.db.ExecWithRetry(
-		ctx,
-		r.retry,
+	_, err := r.db.ExecWithRetry(ctx, r.retry,
 		query,
 		shortLink.ID,
 		shortLink.ShortCode,
@@ -44,17 +44,13 @@ func (r *ShortLinkRepository) Create(ctx context.Context, shortURL, originalURL 
 	)
 
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && string(pqErr.Code) == "23505" {
+			logger.Debug("pizda")
+			return nil, shortlink.ErrShortLinkAlreadyExists
+		}
+
 		return nil, err
-	}
-
-	affected, err := res.RowsAffected()
-	if err != nil {
-		logger.Error("failed to get number of rows affected", err)
-		return shortLink, nil
-	}
-
-	if affected == 0 {
-		return nil, shortlink.ErrShortLinkAlreadyExists
 	}
 
 	return shortLink, nil

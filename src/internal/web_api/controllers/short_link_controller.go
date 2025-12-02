@@ -35,8 +35,22 @@ func NewShortLinkController(
 
 func (c *ShortLinkController) UseHandlers(r chi.Router) {
 	r.Post("/shorten", c.Create)
+	r.Get("/s/{short_url}", c.Redirect)
 }
 
+// Create godoc
+//
+//	@Summary		Создать короткую ссылку
+//	@Description	Создаёт новую короткую ссылку. Если shortCode не задан, он генерируется.
+//	@Tags			shortlink
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		models.CreateShortLinkRequest	true	"Данные для создания короткой ссылки"
+//	@Success		201		{object}	models.CreateShortLinkResponse
+//	@Failure		400		{string}	string	"bad request"
+//	@Failure		409		{string}	string	"short link already exists"
+//	@Failure		500		{string}	string	"internal error"
+//	@Router			/shorten [post]
 func (c *ShortLinkController) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var req models.CreateShortLinkRequest
@@ -57,20 +71,31 @@ func (c *ShortLinkController) Create(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		logger.Error("failed to create short link", err)
+		logger.Error("failed to create short link", "err", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
+	res := models.ShortLinkToCreateResponse(*shortLink)
+
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(shortLink); err != nil {
-		logger.Error("failed to write response", err)
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		logger.Error("failed to write response", "err", err)
 	}
 }
 
+// Redirect godoc
+//
+//	@Summary		Перенаправить по короткой ссылке
+//	@Description	Ищет короткую ссылку, регистрирует визит и перенаправляет на исходный URL.
+//	@Tags			shortlink
+//	@Param			short_url	path	string	true	"Короткий код"
+//	@Success		302			"Redirect"
+//	@Failure		404			{string}	string	"short link not found"
+//	@Failure		500			{string}	string	"internal error"
+//	@Router			/s/{short_url} [get]
 func (c *ShortLinkController) Redirect(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	q := r.URL.Query()
-	shortURL := q.Get("short_url")
+	shortURL := chi.URLParam(r, "short_url")
 
 	shortLink, err := c.shortLinkService.Get(ctx, shortURL)
 	if err != nil {
@@ -79,7 +104,7 @@ func (c *ShortLinkController) Redirect(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		logger.Error("failed to get short link", err)
+		logger.Error("failed to get short link", "err", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
@@ -92,7 +117,7 @@ func (c *ShortLinkController) Redirect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := c.visitService.Register(ctx, visit); err != nil {
-		logger.Error("failed to register visit", err)
+		logger.Error("failed to register visit", "err", err)
 	}
 
 	http.Redirect(w, r, shortLink.OriginalURL, http.StatusFound)

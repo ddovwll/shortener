@@ -36,7 +36,7 @@ func NewVisitConsumer(
 }
 
 func (c *VisitConsumer) Start(ctx context.Context) {
-	msgs := make(chan kafka.Message) // channel will close in StartConsuming
+	msgs := make(chan kafka.Message)
 	c.consumer.StartConsuming(ctx, msgs, c.retry)
 
 	go c.run(ctx, msgs)
@@ -63,9 +63,9 @@ func (c *VisitConsumer) run(ctx context.Context, msgs <-chan kafka.Message) {
 
 			var v visit.Visit
 			if err := json.Unmarshal(msg.Value, &v); err != nil {
-				logger.Error("failed to unmarshal visit", err)
+				logger.Error("failed to unmarshal visit", "err", err)
 				if err := c.consumer.Commit(ctx, msg); err != nil {
-					logger.Error("failed to commit visit", err)
+					logger.Error("failed to commit visit", "err", err)
 				}
 				continue
 			}
@@ -96,7 +96,7 @@ func (c *VisitConsumer) flush(ctx context.Context, batch *[]visit.Visit, lastMsg
 	c.visitService.CreateBatch(ctx, *batch)
 
 	if err := c.consumer.Commit(ctx, **lastMsg); err != nil {
-		logger.Error("failed to commit visit", err)
+		logger.Error("failed to commit visit", "err", err)
 		return
 	}
 

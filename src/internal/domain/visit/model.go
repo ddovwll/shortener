@@ -13,3 +13,13 @@ type Visit struct {
 	UserAgent string
 	IPAddress string
 }
+
+type PeriodCount struct {
+	Period string `json:"period"`
+	Count  int64  `json:"count"`
+}
+
+type UserAgentCount struct {
+	UserAgent string `json:"userAgent"`
+	Count     int64  `json:"count"`
+}

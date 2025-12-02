@@ -67,6 +67,14 @@ linters:
       tab-width: 4
       line-length: 120
   exclusions:
+    rules:
+      - path: src/internal/application/config/config.go
+        linters:
+          - lll
+      - path: src/internal/web_api/controllers
+        linters:
+          - lll
+        source: "^//"
 
 issues:
   max-issues-per-linter: 0
